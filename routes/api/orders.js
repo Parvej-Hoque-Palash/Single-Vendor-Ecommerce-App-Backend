@@ -1,12 +1,10 @@
 const express = require("express");
-const router = express.Router() //helps to find routes
+const router = express.Router()
 const {body, validationResult} = require('express-validator');
 const authenticateToken = require('../../middleware/auth');
 const Order = require('../../models/Order');
 const Product = require("../../models/Product");
 
-//User can create a task
-//Use Bearer token of user to create a task under that user
 router.post(
     '/',
     [authenticateToken,[body('productId', 'productId is required').notEmpty()]],
@@ -45,20 +43,43 @@ router.post(
       }
 );
 
-//User can see all his created task
-//Use Bearer token of user find all the tasks created by that user
-router.get('/', authenticateToken, async (req, res) => {
+
+// router.get('/', authenticateToken, async (req, res) => {
+//   try {
+//     const id = req.user.id;
+//     const orders = await Order.find({userId: id});
+//     res.json(orders);
+//   } catch (error) {
+//     res.status(404).json({ message: "Order not found" });
+//   }
+// });
+
+router.get("/", authenticateToken, async (req, res) => {
   try {
-    const id = req.user.id;
-    const orders = await Order.find({userId: id});
+    const aggregate = [];
+    //for showing specific product details
+    // aggregate.push({
+    //   $match: {
+    //     _id : new mongoose.Types.ObjectId('64c494896223eca3413a442e') 
+    //   }
+    // })
+
+    aggregate.push({
+      $lookup:  {
+        from: "users",
+        localField: "userId",
+        foreignField: "_id",
+        as: "Customer",
+      }
+    })
+    const orders = await Order.aggregate(aggregate);
+    // const orders = await Order.find({});
     res.json(orders);
   } catch (error) {
     res.status(404).json({ message: "Order not found" });
   }
 });
 
-//User can change his task staus
-//Use both Bearer token of user and task id to edit a task staus
 router.put(
   "/status/:id",
   [authenticateToken,[
@@ -88,8 +109,7 @@ router.put(
   }
 });
 
-//User can edit his created task
-//Use both Bearer token of user and task id to edit a task
+
 router.put(
   "/:id",
   [authenticateToken,[
@@ -121,8 +141,7 @@ router.put(
   }
 });
 
-//User can see one of his created task, another user can not see my tasks
-//Use both Bearer token of user and task id to find a task
+
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const id = req.params.id;
@@ -140,7 +159,6 @@ router.get('/:id', authenticateToken, async (req, res) => {
 });
   
   
-//User can delete one of his created task
   router.delete("/:id", authenticateToken, async (req, res) => {
     try {
       const id = req.params.id;
